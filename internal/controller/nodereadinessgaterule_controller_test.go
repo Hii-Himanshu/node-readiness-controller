@@ -626,7 +626,7 @@ var _ = Describe("NodeReadinessGateRule Controller", func() {
 				updatedRule := &nodereadinessiov1alpha1.NodeReadinessGateRule{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: "cleanup-rule"}, updatedRule)
 				return updatedRule.Finalizers
-			}, time.Second*5).Should(ContainElement("nodereadiness.io/cleanup-taints"))
+			}, time.Second*5).Should(ContainElement("readiness.node.x-k8s.io/cleanup-taints"))
 
 			// Verify node still has taint
 			updatedNode := &corev1.Node{}

@@ -40,7 +40,7 @@ With this controller you can:
 **Example Rule**
 
 ```yaml
-apiVersion: nodereadiness.io/v1alpha1
+apiVersion: readiness.node.x-k8s.io/v1alpha1
 kind: NodeReadinessGateRule
 metadata:
   name: network-readiness-rule

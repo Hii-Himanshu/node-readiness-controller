@@ -88,7 +88,7 @@ func main() {
 		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "ba65f13e.nodereadiness.io",
+		LeaderElectionID:       "ba65f13e.readiness.node.x-k8s.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

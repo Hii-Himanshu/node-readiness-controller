@@ -8,7 +8,7 @@
 This rule ensures nodes have working storage before removing the storage readiness taint:
 
 ```yaml
-apiVersion: nodereadiness.io/v1alpha1
+apiVersion: readiness.node.x-k8s.io/v1alpha1
 kind: NodeReadinessGateRule
 metadata:
   name: storage-readiness-rule

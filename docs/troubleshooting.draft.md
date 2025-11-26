@@ -49,7 +49,7 @@ kubectl logs -n nrgcontroller-system deployment/nrgcontroller-controller-manager
 Verify CRDs are installed:
 
 ```sh
-kubectl get crd nodereadinessgaterules.nodereadiness.io
+kubectl get crd nodereadinessgaterules.readiness.node.x-k8s.io
 ```
 
 
