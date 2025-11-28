@@ -31,7 +31,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - nodereadiness.io
+  - readiness.node.x-k8s.io
   resources:
   - nodereadinessgaterules
   verbs:
@@ -43,13 +43,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nodereadiness.io
+  - readiness.node.x-k8s.io
   resources:
   - nodereadinessgaterules/finalizers
   verbs:
   - update
 - apiGroups:
-  - nodereadiness.io
+  - readiness.node.x-k8s.io
   resources:
   - nodereadinessgaterules/status
   verbs:

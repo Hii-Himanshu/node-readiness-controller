@@ -39,7 +39,7 @@ This project implements a Kubernetes controller that manages node taints based o
 │   └── main.go                         # Controller entrypoint
 ├── config/
 │   ├── crd/bases/
-│   │   └── nodereadiness.io_nodereadinessgaterules.yaml  # Generated CRD
+│   │   └── readiness.node.x-k8s.io_nodereadinessgaterules.yaml  # Generated CRD
 │   ├── rbac/
 │   │   ├── role.yaml                   # Controller RBAC
 │   │   ├── role_binding.yaml           # RBAC binding
@@ -73,7 +73,7 @@ Controller logic start here: cmd/main.go
 
 ### Generated CRD
 
-Kubebuilder generated schema: config/crd/bases/nodereadiness.io_nodereadinessgaterules.yaml
+Kubebuilder generated schema: config/crd/bases/readiness.node.x-k8s.io_nodereadinessgaterules.yaml
 
 ### RBAC
 
@@ -246,7 +246,7 @@ if shouldRemoveTaint && currentlyHasTaint {
 
 ### CNI Readiness Rule
 ```yaml
-apiVersion: nodereadiness.io/v1alpha1
+apiVersion: readiness.node.x-k8s.io/v1alpha1
 kind: NodeReadinessGateRule
 metadata:
   name: cni-readiness-rule
@@ -268,7 +268,7 @@ spec:
 
 ### Storage Readiness Rule
 ```yaml
-apiVersion: nodereadiness.io/v1alpha1
+apiVersion: readiness.node.x-k8s.io/v1alpha1
 kind: NodeReadinessGateRule
 metadata:
   name: storage-readiness-rule

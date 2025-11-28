@@ -15,7 +15,7 @@ webhooks:
   name: vnodereadinessgaterule.kb.io
   rules:
   - apiGroups:
-    - nodereadiness.io
+    - readiness.node.x-k8s.io
     apiVersions:
     - v1alpha1
     operations:

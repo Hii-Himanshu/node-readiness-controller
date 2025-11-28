@@ -3,7 +3,7 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.9.0
-domain: nodereadiness.io
+domain: readiness.node.x-k8s.io
 layout:
 - go.kubebuilder.io/v4
 projectName: nrgcontroller
@@ -12,7 +12,7 @@ resources:
 - api:
     crdVersion: v1
   controller: true
-  domain: nodereadiness.io
+  domain: readiness.node.x-k8s.io
   kind: NodeReadinessGateRule
   path: sigs.k8s.io/node-readiness-controller/api/v1alpha1
   version: v1alpha1

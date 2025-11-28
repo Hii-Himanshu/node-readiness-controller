@@ -42,7 +42,7 @@ import (
 
 const (
 	// finalizerName is the finalizer added to NodeReadinessGateRule to ensure cleanup
-	finalizerName = "nodereadiness.io/cleanup-taints"
+	finalizerName = "readiness.node.x-k8s.io/cleanup-taints"
 )
 
 // ReadinessGateController manages node taints based on readiness gate rules
@@ -76,9 +76,9 @@ type RuleReconciler struct {
 	Controller *ReadinessGateController
 }
 
-// +kubebuilder:rbac:groups=nodereadiness.io,resources=nodereadinessgaterules,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=nodereadiness.io,resources=nodereadinessgaterules/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=nodereadiness.io,resources=nodereadinessgaterules/finalizers,verbs=update
+// +kubebuilder:rbac:groups=readiness.node.x-k8s.io,resources=nodereadinessgaterules,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=readiness.node.x-k8s.io,resources=nodereadinessgaterules/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=readiness.node.x-k8s.io,resources=nodereadinessgaterules/finalizers,verbs=update
 
 func (r *RuleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
