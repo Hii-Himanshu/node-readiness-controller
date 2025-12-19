@@ -108,14 +108,6 @@ type ConditionRequirement struct {
 // NodeReadinessRuleStatus defines the observed state of NodeReadinessRule.
 // +kubebuilder:validation:MinProperties=1
 type NodeReadinessRuleStatus struct {
-	// conditions represents the observations of a NodeReadinessRule's current state.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=32
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
 	// observedGeneration reflects the generation of the most recently observed NodeReadinessRule by the controller.
 	//
 	// +optional
@@ -127,7 +119,7 @@ type NodeReadinessRuleStatus struct {
 	//
 	// +optional
 	// +listType=set
-	// +kubebuilder:validation:MaxItems=1000
+	// +kubebuilder:validation:MaxItems=5000
 	// +kubebuilder:validation:items:MaxLength=253
 	AppliedNodes []string `json:"appliedNodes,omitempty"`
 
@@ -137,7 +129,7 @@ type NodeReadinessRuleStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=nodeName
-	// +kubebuilder:validation:MaxItems=1000
+	// +kubebuilder:validation:MaxItems=5000
 	FailedNodes []NodeFailure `json:"failedNodes,omitempty"`
 
 	// nodeEvaluations provides detailed insight into the rule's assessment for individual Nodes.
@@ -147,7 +139,7 @@ type NodeReadinessRuleStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=nodeName
-	// +kubebuilder:validation:MaxItems=1000
+	// +kubebuilder:validation:MaxItems=5000
 	NodeEvaluations []NodeEvaluation `json:"nodeEvaluations,omitempty"`
 
 	// dryRunResults captures the outcome of the rule evaluation when DryRun is enabled.
@@ -208,7 +200,7 @@ type NodeEvaluation struct {
 	// +required
 	// +listType=map
 	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=1000
+	// +kubebuilder:validation:MaxItems=5000
 	ConditionResults []ConditionEvaluationResult `json:"conditionResults,omitempty"`
 
 	// taintStatus represents the taint status on the Node, one of Present, Absent.
