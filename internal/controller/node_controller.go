@@ -76,6 +76,13 @@ func (r *ReadinessGateController) processNodeAgainstAllRules(ctx context.Context
 			"resourceVersion", rule.ResourceVersion,
 			"generation", rule.Generation)
 
+		if !rule.DeletionTimestamp.IsZero() {
+			log.V(4).Info("Skipping rule being deleted",
+				"node", node.Name,
+				"rule", rule.Name)
+			continue
+		}
+
 		// Skip if bootstrap-only and already completed
 		if r.isBootstrapCompleted(node.Name, rule.Name) && rule.Spec.EnforcementMode == readinessv1alpha1.EnforcementModeBootstrapOnly {
 			log.Info("Skipping bootstrap-only rule - already completed",
