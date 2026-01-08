@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +49,8 @@ func TestCheckHealth(t *testing.T) {
 				endpoint = "http://invalid-url"
 			}
 
-			health, err := checkHealth(endpoint)
+			httpClient := &http.Client{Timeout: 1 * time.Second}
+			health, err := checkHealth(httpClient, endpoint)
 			if err != nil {
 				if !tt.expectError {
 					t.Errorf("checkHealth() error = %v", err)

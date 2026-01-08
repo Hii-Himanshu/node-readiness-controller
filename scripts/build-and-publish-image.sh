@@ -24,17 +24,11 @@ COMPONENT=${COMPONENT:-controller}
 
 if [[ "$COMPONENT" == "controller" ]]; then
   echo "Building controller..."
-  IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX} make docker-buildx
+  IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX}/node-readiness-controller make docker-buildx
 elif [[ "$COMPONENT" == "reporter" ]]; then
   echo "Building reporter..."
-  IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX} make docker-buildx-reporter
+  IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX}/node-readiness-reporter make docker-buildx-reporter
 else
   echo "Unknown component: $COMPONENT"
   exit 1
 fi
-
-
-# TODO(psaggu): remove once there's a end-to-end green run of docker-buildx
-# and tags are successfully published to our artifact registry repository
-#IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX} make docker-buildx
-#IMG_TAG=${IMG_TAG} IMG_PREFIX=${IMG_PREFIX} make docker-push

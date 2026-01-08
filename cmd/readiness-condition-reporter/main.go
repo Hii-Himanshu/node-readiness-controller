@@ -12,6 +12,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
+)
+
+const (
+	envNodeName          = "NODE_NAME"
+	envConditionType     = "CONDITION_TYPE"
+	envCheckEndpoint     = "CHECK_ENDPOINT"
+	envCheckInterval     = "CHECK_INTERVAL"
+	defaultCheckInterval = 30 * time.Second
+	defaultHTTPTimeout   = 10 * time.Second
 )
 
 // HealthResponse represents the health check response structure
@@ -22,53 +33,63 @@ type HealthResponse struct {
 }
 
 func main() {
+	klog.InitFlags(nil)
+
 	// Get configuration from environment
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := os.Getenv(envNodeName)
 	if nodeName == "" {
-		fmt.Fprintf(os.Stderr, "NODE_NAME environment variable not set\n")
+		klog.ErrorS(nil, "Environment variable not set", "variable", envNodeName)
 		os.Exit(1)
 	}
 
-	conditionType := os.Getenv("CONDITION_TYPE")
+	conditionType := os.Getenv(envConditionType)
 	if conditionType == "" {
-		fmt.Fprintf(os.Stderr, "CONDITION_TYPE environment variable not set\n")
+		klog.ErrorS(nil, "Environment variable not set", "variable", envConditionType)
 		os.Exit(1)
 	}
 
-	checkEndpoint := os.Getenv("CHECK_ENDPOINT")
+	checkEndpoint := os.Getenv(envCheckEndpoint)
 	if checkEndpoint == "" {
-		fmt.Fprintf(os.Stderr, "CHECK_ENDPOINT environment variable not set\n")
+		klog.ErrorS(nil, "Environment variable not set", "variable", envCheckEndpoint)
 		os.Exit(1)
 	}
 
-	checkInterval := os.Getenv("CHECK_INTERVAL")
-	interval := 30 * time.Second // Default interval
+	checkInterval := os.Getenv(envCheckInterval)
+	interval := defaultCheckInterval
 	if checkInterval != "" {
 		parsedInterval, err := time.ParseDuration(checkInterval)
 		if err == nil {
 			interval = parsedInterval
+		} else {
+			klog.ErrorS(err, "Failed to parse check interval, using default", "input", checkInterval, "default", defaultCheckInterval)
 		}
 	}
 
 	// Create Kubernetes client
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create in-cluster config: %v\n", err)
+		klog.ErrorS(err, "Failed to create in-cluster config")
 		os.Exit(1)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
+		klog.ErrorS(err, "Failed to create client")
 		os.Exit(1)
 	}
+
+	httpClient := &http.Client{
+		Timeout: defaultHTTPTimeout,
+	}
+
+	klog.InfoS("Starting readiness condition reporter", "node", nodeName, "condition", conditionType, "interval", interval)
 
 	// Main loop to check health and update condition
 	for {
 		// Check health
-		health, err := checkHealth(checkEndpoint)
+		health, err := checkHealth(httpClient, checkEndpoint)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Health check failed: %v\n", err)
+			klog.ErrorS(err, "Health check failed", "endpoint", checkEndpoint)
 			// Report unhealthy on error
 			health = &HealthResponse{
 				Healthy: false,
@@ -78,9 +99,8 @@ func main() {
 		}
 
 		// Update node condition
-		err = updateNodeCondition(clientset, nodeName, conditionType, health)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to update node condition: %v\n", err)
+		if err := updateNodeCondition(clientset, nodeName, conditionType, health); err != nil {
+			klog.ErrorS(err, "Failed to update node condition", "node", nodeName, "condition", conditionType)
 		}
 
 		// Wait for next check
@@ -89,8 +109,8 @@ func main() {
 }
 
 // checkHealth performs an HTTP request to check component health
-func checkHealth(endpoint string) (*HealthResponse, error) {
-	resp, err := http.Get(endpoint)
+func checkHealth(client *http.Client, endpoint string) (*HealthResponse, error) {
+	resp, err := client.Get(endpoint)
 	if err != nil {
 		return &HealthResponse{
 			Healthy: false,
@@ -114,68 +134,74 @@ func checkHealth(endpoint string) (*HealthResponse, error) {
 	bodyString := ""
 	if err == nil {
 		bodyString = string(bodyBytes)
+	} else {
+		klog.ErrorS(err, "Failed to read response body", "endpoint", endpoint)
+		bodyString = "<failed to read response body>"
 	}
+
 	return &HealthResponse{
 		Healthy: false,
 		Reason:  "EndpointNotReady",
-		Message: fmt.Sprintf("Endpoint returned non-2xx status at %s: %s", endpoint, bodyString),
+		Message: fmt.Sprintf("Endpoint returned non-2xx status code %d at %s: %s", resp.StatusCode, endpoint, bodyString),
 	}, nil
 }
 
 // updateNodeCondition updates the node condition based on health check
 func updateNodeCondition(client kubernetes.Interface, nodeName, conditionType string, health *HealthResponse) error {
-	// Get the node
-	node, err := client.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Get the node
+		node, err := client.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-	// Create new condition
-	now := metav1.NewTime(time.Now())
-	status := corev1.ConditionFalse
-	if health.Healthy {
-		status = corev1.ConditionTrue
-	}
+		// Create new condition
+		now := metav1.NewTime(time.Now())
+		status := corev1.ConditionFalse
+		if health.Healthy {
+			status = corev1.ConditionTrue
+		}
 
-	// Find existing condition to preserve transition time if status hasn't changed
-	var transitionTime metav1.Time
-	for _, condition := range node.Status.Conditions {
-		if string(condition.Type) == conditionType {
-			if condition.Status == status {
-				transitionTime = condition.LastTransitionTime
+		// Find existing condition to preserve transition time if status hasn't changed
+		var transitionTime metav1.Time
+		for _, condition := range node.Status.Conditions {
+			if string(condition.Type) == conditionType {
+				if condition.Status == status {
+					transitionTime = condition.LastTransitionTime
+				}
+				break
 			}
-			break
 		}
-	}
 
-	if transitionTime.IsZero() {
-		transitionTime = now
-	}
-
-	// Create condition
-	condition := corev1.NodeCondition{
-		Type:               corev1.NodeConditionType(conditionType),
-		Status:             status,
-		LastHeartbeatTime:  now,
-		LastTransitionTime: transitionTime,
-		Reason:             health.Reason,
-		Message:            health.Message,
-	}
-
-	// Update node status
-	found := false
-	for i, c := range node.Status.Conditions {
-		if string(c.Type) == conditionType {
-			node.Status.Conditions[i] = condition
-			found = true
-			break
+		if transitionTime.IsZero() {
+			transitionTime = now
 		}
-	}
 
-	if !found {
-		node.Status.Conditions = append(node.Status.Conditions, condition)
-	}
+		// Create condition
+		condition := corev1.NodeCondition{
+			Type:               corev1.NodeConditionType(conditionType),
+			Status:             status,
+			LastHeartbeatTime:  now,
+			LastTransitionTime: transitionTime,
+			Reason:             health.Reason,
+			Message:            health.Message,
+		}
 
-	_, err = client.CoreV1().Nodes().UpdateStatus(context.TODO(), node, metav1.UpdateOptions{})
-	return err
+		// Update node status
+		found := false
+		for i, c := range node.Status.Conditions {
+			if string(c.Type) == conditionType {
+				node.Status.Conditions[i] = condition
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			node.Status.Conditions = append(node.Status.Conditions, condition)
+		}
+
+		_, err = client.CoreV1().Nodes().UpdateStatus(context.TODO(), node, metav1.UpdateOptions{})
+		return err
+	})
 }
